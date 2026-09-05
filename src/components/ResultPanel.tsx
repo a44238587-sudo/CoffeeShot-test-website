@@ -1,12 +1,4 @@
-import {
-  ActivityIndicator,
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '../theme';
 import type { AnalyzeResult, UploadStatus } from '../types';
@@ -45,37 +37,31 @@ export function ResultPanel({
 }: ResultPanelProps) {
   return (
     <View style={styles.sheet}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Image source={{ uri }} style={styles.preview} resizeMode="cover" />
-        <View style={styles.meta}>
-          <Text style={styles.kicker}>
-            {result?.source === 'api' ? 'Backend' : 'Mock local'}
-          </Text>
-          <Text style={styles.status}>{statusLabel(status, progress)}</Text>
-          {status === 'uploading' ? (
-            <View style={styles.track}>
-              <View style={[styles.fill, { width: `${Math.max(progress, 6)}%` }]} />
+      <Image source={{ uri }} style={styles.preview} resizeMode="cover" />
+      <View style={styles.meta}>
+        <Text style={styles.kicker}>{result?.source === 'api' ? 'Backend' : 'Mock local'}</Text>
+        <Text style={styles.status}>{statusLabel(status, progress)}</Text>
+        {status === 'uploading' ? (
+          <View style={styles.track}>
+            <View style={[styles.fill, { width: `${Math.max(progress, 6)}%` }]} />
+          </View>
+        ) : null}
+        {status === 'uploading' ? <ActivityIndicator color={colors.amber} style={styles.spinner} /> : null}
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {result ? (
+          <View style={styles.result}>
+            <View style={styles.resultHead}>
+              <Text style={styles.resultTitle}>{result.title}</Text>
+              {typeof result.score === 'number' ? <Text style={styles.score}>{result.score}</Text> : null}
             </View>
-          ) : null}
-          {status === 'uploading' ? <ActivityIndicator color={colors.amber} style={styles.spinner} /> : null}
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-          {result ? (
-            <View style={styles.result}>
-              <View style={styles.resultHead}>
-                <Text style={styles.resultTitle}>{result.title}</Text>
-                {typeof result.score === 'number' ? (
-                  <Text style={styles.score}>{result.score}</Text>
-                ) : null}
-              </View>
-              {result.tips.map((tip) => (
-                <Text key={tip} style={styles.tip}>
-                  · {tip}
-                </Text>
-              ))}
-            </View>
-          ) : null}
-        </View>
-      </ScrollView>
+            {result.tips.map((tip) => (
+              <Text key={tip} style={styles.tip}>
+                · {tip}
+              </Text>
+            ))}
+          </View>
+        ) : null}
+      </View>
       <View style={styles.actions}>
         {status === 'error' ? (
           <Pressable accessibilityRole="button" onPress={onRetry} style={styles.retry}>
@@ -92,22 +78,22 @@ export function ResultPanel({
 
 const styles = StyleSheet.create({
   sheet: {
-    ...StyleSheet.absoluteFill,
+    flex: 1,
     backgroundColor: colors.bg,
-  },
-  content: {
-    padding: 18,
-    paddingBottom: 8,
-    gap: 16,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 20,
   },
   preview: {
     width: '100%',
-    aspectRatio: 3 / 4,
+    height: 240,
     borderRadius: 18,
     backgroundColor: colors.espresso,
   },
   meta: {
+    flex: 1,
     gap: 8,
+    paddingTop: 14,
   },
   kicker: {
     color: colors.amber,
@@ -171,9 +157,8 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   actions: {
-    paddingHorizontal: 18,
-    paddingBottom: 22,
     gap: 10,
+    paddingTop: 12,
   },
   retry: {
     borderRadius: 999,

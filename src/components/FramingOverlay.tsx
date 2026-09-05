@@ -9,7 +9,7 @@ type FramingOverlayProps = {
 
 export function FramingOverlay({ hint, banner }: FramingOverlayProps) {
   return (
-    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+    <View style={[StyleSheet.absoluteFill, styles.ignoreTouch]}>
       <View style={styles.grid}>
         <View style={[styles.vLine, { left: '33.333%' }]} />
         <View style={[styles.vLine, { left: '66.666%' }]} />
@@ -39,6 +39,9 @@ export function FramingOverlay({ hint, banner }: FramingOverlayProps) {
 const BRACKET = 22;
 
 const styles = StyleSheet.create({
+  ignoreTouch: {
+    pointerEvents: 'none',
+  },
   grid: {
     ...StyleSheet.absoluteFill,
     marginHorizontal: 18,
