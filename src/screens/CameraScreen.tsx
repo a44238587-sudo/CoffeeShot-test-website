@@ -192,7 +192,7 @@ export function CameraScreen() {
   }, []);
 
   const handleMountError = useCallback(
-    (event: { message?: string }) => {
+    (event: { message: string }) => {
       if (switchPhaseRef.current === 'to-next') {
         switchPhaseRef.current = 'revert';
         setBanner(unavailableBanner(facingRef.current));
@@ -368,7 +368,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   switchingOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(8, 6, 5, 0.45)',
