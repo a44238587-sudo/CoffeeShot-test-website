@@ -1,6 +1,6 @@
 import { CameraView, useCameraPermissions, type CameraType } from 'expo-camera';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { FramingOverlay } from '../components/FramingOverlay';
 import { PermissionGate } from '../components/PermissionGate';
@@ -8,6 +8,7 @@ import { ResultPanel } from '../components/ResultPanel';
 import { hasRemoteApi } from '../config';
 import { analyzePhoto } from '../services/analyzePhoto';
 import { createDemoCapture } from '../services/picture';
+import { countWebVideoInputs, stopWebVideoStreams } from '../services/webCamera';
 import { colors } from '../theme';
 import type { AnalyzeResult, UploadStatus } from '../types';
 
@@ -19,22 +20,45 @@ const AI_HINTS = [
   'Parfait — restez stable',
 ];
 
+const MOCK_BANNER = hasRemoteApi ? undefined : 'Mode mock — aucune API configurée';
+const READY_TIMEOUT_MS = 8000;
+const WEB_STREAM_RELEASE_MS = 80;
+
+type SwitchPhase = 'idle' | 'to-next' | 'revert';
+
+function facingLabel(type: CameraType): string {
+  return type === 'front' ? 'avant' : 'arrière';
+}
+
+function unavailableBanner(failed: CameraType): string {
+  const backTo = failed === 'front' ? 'arrière' : 'avant';
+  return `Caméra ${facingLabel(failed)} indisponible — retour à l’${backTo}`;
+}
+
 export function CameraScreen() {
   const cameraRef = useRef<CameraView>(null);
+  const switchPhaseRef = useRef<SwitchPhase>('idle');
+  const previousFacingRef = useRef<CameraType>('back');
+  const facingRef = useRef<CameraType>('back');
+  const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState<CameraType>('back');
+  const [cameraEpoch, setCameraEpoch] = useState(0);
+  const [previewHeld, setPreviewHeld] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
+  const [switching, setSwitching] = useState(false);
   const [demoMode, setDemoMode] = useState(false);
   const [busy, setBusy] = useState(false);
   const [hintIndex, setHintIndex] = useState(0);
-  const [banner, setBanner] = useState<string | undefined>(
-    hasRemoteApi ? undefined : 'Mode mock — aucune API configurée',
-  );
+  const [banner, setBanner] = useState<string | undefined>(MOCK_BANNER);
   const [capturedUri, setCapturedUri] = useState<string | null>(null);
   const [status, setStatus] = useState<UploadStatus>('idle');
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState<AnalyzeResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  facingRef.current = facing;
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -42,6 +66,66 @@ export function CameraScreen() {
     }, 3200);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (holdTimerRef.current) {
+        clearTimeout(holdTimerRef.current);
+      }
+      stopWebVideoStreams();
+    };
+  }, []);
+
+  const remountCamera = useCallback((nextFacing: CameraType) => {
+    stopWebVideoStreams();
+    setCameraReady(false);
+    setFacing(nextFacing);
+
+    if (holdTimerRef.current) {
+      clearTimeout(holdTimerRef.current);
+      holdTimerRef.current = null;
+    }
+
+    if (Platform.OS === 'web') {
+      setPreviewHeld(true);
+      holdTimerRef.current = setTimeout(() => {
+        setPreviewHeld(false);
+        setCameraEpoch((value) => value + 1);
+        holdTimerRef.current = null;
+      }, WEB_STREAM_RELEASE_MS);
+      return;
+    }
+
+    setCameraEpoch((value) => value + 1);
+  }, []);
+
+  const enterDemo = useCallback((reason?: string) => {
+    switchPhaseRef.current = 'idle';
+    setSwitching(false);
+    setPreviewHeld(false);
+    setDemoMode(true);
+    setCameraReady(true);
+    setBanner(reason ?? 'Mode démo — caméra simulée');
+  }, []);
+
+  useEffect(() => {
+    if (demoMode || cameraReady || previewHeld) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      if (switchPhaseRef.current === 'to-next') {
+        switchPhaseRef.current = 'revert';
+        setBanner(unavailableBanner(facingRef.current));
+        remountCamera(previousFacingRef.current);
+        return;
+      }
+
+      enterDemo('Caméra trop longue à démarrer — mode démo');
+    }, READY_TIMEOUT_MS);
+
+    return () => clearTimeout(timer);
+  }, [cameraEpoch, cameraReady, demoMode, enterDemo, previewHeld, remountCamera]);
 
   const runAnalysis = useCallback(async (uri: string) => {
     setStatus('uploading');
@@ -97,16 +181,47 @@ export function CameraScreen() {
     }
   }, [busy, cameraReady, demoMode, runAnalysis]);
 
-  const enterDemo = useCallback((reason?: string) => {
-    setDemoMode(true);
+  const handleCameraReady = useCallback(() => {
+    const phase = switchPhaseRef.current;
+    switchPhaseRef.current = 'idle';
     setCameraReady(true);
-    setBanner(reason ?? 'Mode démo — caméra simulée');
+    setSwitching(false);
+    if (phase === 'to-next') {
+      setBanner(MOCK_BANNER);
+    }
   }, []);
 
-  const toggleFacing = useCallback(() => {
-    setFacing((current) => (current === 'back' ? 'front' : 'back'));
-    setCameraReady(false);
-  }, []);
+  const handleMountError = useCallback(
+    (event: { message: string }) => {
+      if (switchPhaseRef.current === 'to-next') {
+        switchPhaseRef.current = 'revert';
+        setBanner(unavailableBanner(facingRef.current));
+        remountCamera(previousFacingRef.current);
+        return;
+      }
+
+      enterDemo(`Caméra indisponible — ${event.message || 'mode démo'}`);
+    },
+    [enterDemo, remountCamera],
+  );
+
+  const toggleFacing = useCallback(async () => {
+    if (demoMode || switching || busy || !cameraReady) {
+      return;
+    }
+
+    const next: CameraType = facing === 'back' ? 'front' : 'back';
+    const videoCount = await countWebVideoInputs();
+    if (videoCount !== null && videoCount < 2) {
+      setBanner('Une seule caméra est disponible sur cet appareil');
+      return;
+    }
+
+    previousFacingRef.current = facing;
+    switchPhaseRef.current = 'to-next';
+    setSwitching(true);
+    remountCamera(next);
+  }, [busy, cameraReady, demoMode, facing, remountCamera, switching]);
 
   const retake = useCallback(() => {
     setCapturedUri(null);
@@ -114,6 +229,8 @@ export function CameraScreen() {
     setProgress(0);
     setResult(null);
     setError(null);
+    setCameraReady(false);
+    setCameraEpoch((value) => value + 1);
   }, []);
 
   if (!permission && !demoMode) {
@@ -151,6 +268,9 @@ export function CameraScreen() {
     );
   }
 
+  const flipDisabled = demoMode || switching || busy || !cameraReady;
+  const shutterDisabled = busy || (!demoMode && !cameraReady);
+
   return (
     <View style={styles.fill}>
       {demoMode ? (
@@ -158,21 +278,30 @@ export function CameraScreen() {
           <View style={styles.demoGlow} />
           <Text style={styles.demoMark}>Aperçu démo</Text>
         </View>
+      ) : previewHeld ? (
+        <View style={styles.fill} />
       ) : (
         <CameraView
+          key={`cam-${facing}-${cameraEpoch}`}
           ref={cameraRef}
           style={styles.fill}
           facing={facing}
           mode="picture"
           mirror={facing === 'front'}
-          onCameraReady={() => setCameraReady(true)}
-          onMountError={(event) => {
-            enterDemo(`Caméra indisponible — ${event.message || 'mode démo'}`);
-          }}
+          onCameraReady={handleCameraReady}
+          onMountError={handleMountError}
         />
       )}
 
       <FramingOverlay hint={AI_HINTS[hintIndex]} banner={banner} />
+
+      {!demoMode && (switching || !cameraReady) ? (
+        <View style={styles.switchingOverlay}>
+          <Text style={styles.switchingText}>
+            {switching ? 'Changement de caméra…' : 'Ouverture de la caméra…'}
+          </Text>
+        </View>
+      ) : null}
 
       <View style={styles.topBar}>
         <Text style={styles.brand}>CoffeeShot</Text>
@@ -183,9 +312,11 @@ export function CameraScreen() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Retourner la caméra"
-          disabled={demoMode}
-          onPress={toggleFacing}
-          style={[styles.sideButton, demoMode && styles.sideDisabled]}
+          disabled={flipDisabled}
+          onPress={() => {
+            void toggleFacing();
+          }}
+          style={[styles.sideButton, flipDisabled && styles.sideDisabled]}
         >
           <Text style={styles.sideLabel}>Flip</Text>
         </Pressable>
@@ -193,11 +324,11 @@ export function CameraScreen() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Prendre la photo"
-          disabled={busy || (!demoMode && !cameraReady)}
+          disabled={shutterDisabled}
           onPress={() => {
             void capture();
           }}
-          style={[styles.shutter, (busy || (!demoMode && !cameraReady)) && styles.shutterBusy]}
+          style={[styles.shutter, shutterDisabled && styles.shutterBusy]}
         >
           <View style={styles.shutterInner} />
         </Pressable>
@@ -235,6 +366,19 @@ const styles = StyleSheet.create({
     letterSpacing: 1.4,
     textTransform: 'uppercase',
     fontSize: 12,
+  },
+  switchingOverlay: {
+    ...StyleSheet.absoluteFill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(8, 6, 5, 0.45)',
+    pointerEvents: 'none',
+  },
+  switchingText: {
+    color: colors.cream,
+    fontSize: 14,
+    fontWeight: '600',
+    letterSpacing: 0.4,
   },
   topBar: {
     position: 'absolute',
