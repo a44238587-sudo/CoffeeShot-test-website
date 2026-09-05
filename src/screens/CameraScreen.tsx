@@ -1,342 +1,169 @@
-import { CameraView, useCameraPermissions, type CameraType } from 'expo-camera';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { FramingOverlay } from '../components/FramingOverlay';
 import { PermissionGate } from '../components/PermissionGate';
 import { ResultPanel } from '../components/ResultPanel';
-import { hasRemoteApi } from '../config';
-import { analyzePhoto } from '../services/analyzePhoto';
-import { createDemoCapture } from '../services/picture';
-import { countWebVideoInputs, stopWebVideoStreams } from '../services/webCamera';
+import { SdkPreview } from '../components/SdkPreview';
+import { sdkOrigin } from '../config';
+import { useCoffeeShotSession } from '../sdk/useCoffeeShotSession';
 import { colors } from '../theme';
-import type { AnalyzeResult, UploadStatus } from '../types';
 
-const AI_HINTS = [
-  'Centrez le sujet',
-  'Alignez sur la grille des tiers',
-  'Gardez un peu d’espace au-dessus',
-  'Lumière plus douce sur la gauche',
-  'Parfait — restez stable',
-];
-
-const MOCK_BANNER = hasRemoteApi ? undefined : 'Mode mock — aucune API configurée';
-const READY_TIMEOUT_MS = 8000;
-const WEB_STREAM_RELEASE_MS = 80;
-
-type SwitchPhase = 'idle' | 'to-next' | 'revert';
-
-function facingLabel(type: CameraType): string {
-  return type === 'front' ? 'avant' : 'arrière';
-}
-
-function unavailableBanner(failed: CameraType): string {
-  const backTo = failed === 'front' ? 'arrière' : 'avant';
-  return `Caméra ${facingLabel(failed)} indisponible — retour à l’${backTo}`;
+function compatibilityMessage(reason?: string): string {
+  if (reason === 'insecure_context') {
+    return 'La caméra nécessite HTTPS ou localhost. Continuez en mode démo, ou rouvrez la page dans un contexte sécurisé.';
+  }
+  if (reason === 'no_media_devices') {
+    return 'Aucune caméra n’est disponible dans ce navigateur. Continuez en mode démo pour tester le cadrage et l’analyse.';
+  }
+  return 'Le SDK CoffeeShot n’a pas trouvé de caméra utilisable. Continuez en mode démo pour tester la page.';
 }
 
 export function CameraScreen() {
-  const cameraRef = useRef<CameraView>(null);
-  const switchPhaseRef = useRef<SwitchPhase>('idle');
-  const previousFacingRef = useRef<CameraType>('back');
-  const facingRef = useRef<CameraType>('back');
-  const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const session = useCoffeeShotSession();
 
-  const [permission, requestPermission] = useCameraPermissions();
-  const [facing, setFacing] = useState<CameraType>('back');
-  const [cameraEpoch, setCameraEpoch] = useState(0);
-  const [previewHeld, setPreviewHeld] = useState(false);
-  const [cameraReady, setCameraReady] = useState(false);
-  const [switching, setSwitching] = useState(false);
-  const [demoMode, setDemoMode] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [hintIndex, setHintIndex] = useState(0);
-  const [banner, setBanner] = useState<string | undefined>(MOCK_BANNER);
-  const [capturedUri, setCapturedUri] = useState<string | null>(null);
-  const [status, setStatus] = useState<UploadStatus>('idle');
-  const [progress, setProgress] = useState(0);
-  const [result, setResult] = useState<AnalyzeResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  facingRef.current = facing;
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setHintIndex((index) => (index + 1) % AI_HINTS.length);
-    }, 3200);
-    return () => clearInterval(timer);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (holdTimerRef.current) {
-        clearTimeout(holdTimerRef.current);
-      }
-      stopWebVideoStreams();
-    };
-  }, []);
-
-  const remountCamera = useCallback((nextFacing: CameraType) => {
-    stopWebVideoStreams();
-    setCameraReady(false);
-    setFacing(nextFacing);
-
-    if (holdTimerRef.current) {
-      clearTimeout(holdTimerRef.current);
-      holdTimerRef.current = null;
-    }
-
-    if (Platform.OS === 'web') {
-      setPreviewHeld(true);
-      holdTimerRef.current = setTimeout(() => {
-        setPreviewHeld(false);
-        setCameraEpoch((value) => value + 1);
-        holdTimerRef.current = null;
-      }, WEB_STREAM_RELEASE_MS);
-      return;
-    }
-
-    setCameraEpoch((value) => value + 1);
-  }, []);
-
-  const enterDemo = useCallback((reason?: string) => {
-    switchPhaseRef.current = 'idle';
-    setSwitching(false);
-    setPreviewHeld(false);
-    setDemoMode(true);
-    setCameraReady(true);
-    setBanner(reason ?? 'Mode démo — caméra simulée');
-  }, []);
-
-  useEffect(() => {
-    if (demoMode || cameraReady || previewHeld) {
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      if (switchPhaseRef.current === 'to-next') {
-        switchPhaseRef.current = 'revert';
-        setBanner(unavailableBanner(facingRef.current));
-        remountCamera(previousFacingRef.current);
-        return;
-      }
-
-      enterDemo('Caméra trop longue à démarrer — mode démo');
-    }, READY_TIMEOUT_MS);
-
-    return () => clearTimeout(timer);
-  }, [cameraEpoch, cameraReady, demoMode, enterDemo, previewHeld, remountCamera]);
-
-  const runAnalysis = useCallback(async (uri: string) => {
-    setStatus('uploading');
-    setProgress(0);
-    setResult(null);
-    setError(null);
-    try {
-      const analysis = await analyzePhoto(uri, setProgress);
-      setResult(analysis);
-      setStatus('success');
-      setProgress(100);
-    } catch (caught) {
-      setStatus('error');
-      setError(caught instanceof Error ? caught.message : 'Analyse impossible');
-    }
-  }, []);
-
-  const capture = useCallback(async () => {
-    if (busy) {
-      return;
-    }
-
-    setBusy(true);
-    try {
-      let uri: string | undefined;
-
-      if (demoMode) {
-        uri = await createDemoCapture();
-      } else {
-        if (!cameraReady) {
-          return;
-        }
-        const photo = await cameraRef.current?.takePictureAsync({
-          quality: 0.85,
-          skipProcessing: true,
-        });
-        uri = photo?.uri;
-      }
-
-      if (!uri) {
-        throw new Error('Aucune image capturée');
-      }
-
-      setCapturedUri(uri);
-      await runAnalysis(uri);
-    } catch (caught) {
-      const message = caught instanceof Error ? caught.message : 'Capture impossible';
-      setBanner(message);
-      setError(message);
-      setStatus('error');
-    } finally {
-      setBusy(false);
-    }
-  }, [busy, cameraReady, demoMode, runAnalysis]);
-
-  const handleCameraReady = useCallback(() => {
-    const phase = switchPhaseRef.current;
-    switchPhaseRef.current = 'idle';
-    setCameraReady(true);
-    setSwitching(false);
-    if (phase === 'to-next') {
-      setBanner(MOCK_BANNER);
-    }
-  }, []);
-
-  const handleMountError = useCallback(
-    (event: { message: string }) => {
-      if (switchPhaseRef.current === 'to-next') {
-        switchPhaseRef.current = 'revert';
-        setBanner(unavailableBanner(facingRef.current));
-        remountCamera(previousFacingRef.current);
-        return;
-      }
-
-      enterDemo(`Caméra indisponible — ${event.message || 'mode démo'}`);
+  const onPreviewReady = useCallback(
+    (video: HTMLVideoElement) => {
+      session.attachPreview(video);
     },
-    [enterDemo, remountCamera],
+    [session.attachPreview],
   );
 
-  const toggleFacing = useCallback(async () => {
-    if (demoMode || switching || busy || !cameraReady) {
-      return;
-    }
-
-    const next: CameraType = facing === 'back' ? 'front' : 'back';
-    const videoCount = await countWebVideoInputs();
-    if (videoCount !== null && videoCount < 2) {
-      setBanner('Une seule caméra est disponible sur cet appareil');
-      return;
-    }
-
-    previousFacingRef.current = facing;
-    switchPhaseRef.current = 'to-next';
-    setSwitching(true);
-    remountCamera(next);
-  }, [busy, cameraReady, demoMode, facing, remountCamera, switching]);
-
-  const retake = useCallback(() => {
-    setCapturedUri(null);
-    setStatus('idle');
-    setProgress(0);
-    setResult(null);
-    setError(null);
-    setCameraReady(false);
-    setCameraEpoch((value) => value + 1);
-  }, []);
-
-  if (!permission && !demoMode) {
-    return <View style={styles.fill} />;
-  }
-
-  if (!demoMode && permission && !permission.granted) {
+  if (Platform.OS !== 'web') {
     return (
       <PermissionGate
-        title="La caméra est requise"
-        message="CoffeeShot affiche un cadrage temps réel. Autorisez la caméra, ou continuez en mode démo si le navigateur n’a pas de webcam."
-        primaryLabel="Autoriser la caméra"
-        onPrimary={() => {
-          void requestPermission();
-        }}
-        secondaryLabel="Continuer en mode démo"
-        onSecondary={() => enterDemo()}
+        title="Disponible sur le web"
+        message="Cette page de test pilote le CoffeeShot browser SDK. Ouvrez-la dans un navigateur pour la caméra, le flip et l’analyse."
+        primaryLabel="Compris"
+        onPrimary={() => undefined}
       />
     );
   }
 
-  if (capturedUri) {
+  if (!session.sdk && !session.sdkError) {
     return (
-      <ResultPanel
-        uri={capturedUri}
-        status={status}
-        progress={progress}
-        result={result}
-        error={error}
-        onRetake={retake}
-        onRetry={() => {
-          void runAnalysis(capturedUri);
-        }}
+      <View style={styles.boot}>
+        <Text style={styles.bootMark}>CoffeeShot</Text>
+        <Text style={styles.bootTitle}>Chargement du SDK…</Text>
+        <Text style={styles.bootCopy}>{sdkOrigin}/sdk.mjs</Text>
+      </View>
+    );
+  }
+
+  if (session.sdkError) {
+    return (
+      <PermissionGate
+        title="SDK indisponible"
+        message={`${session.sdkError} Vérifiez EXPO_PUBLIC_SDK_ORIGIN (${sdkOrigin}).`}
+        primaryLabel="Réessayer"
+        onPrimary={session.reloadSdk}
       />
     );
   }
 
-  const flipDisabled = demoMode || switching || busy || !cameraReady;
-  const shutterDisabled = busy || (!demoMode && !cameraReady);
+  if (!session.intent) {
+    const supported = session.compatibility?.supported ?? false;
+    return (
+      <PermissionGate
+        title={supported ? 'La caméra est requise' : 'Caméra indisponible'}
+        message={
+          session.error ??
+          (supported
+            ? 'CoffeeShot affiche un cadrage temps réel via le browser SDK. Autorisez la caméra, ou continuez en mode démo.'
+            : compatibilityMessage(session.compatibility?.reason))
+        }
+        primaryLabel={supported ? 'Autoriser la caméra' : 'Continuer en mode démo'}
+        onPrimary={() => session.start(supported ? 'live' : 'demo')}
+        secondaryLabel={supported ? 'Continuer en mode démo' : undefined}
+        onSecondary={supported ? () => session.start('demo') : undefined}
+      />
+    );
+  }
+
+  const flipping = session.clientState === 'flipping';
+  const starting = session.clientState === 'starting';
+  const commandBusy =
+    starting ||
+    flipping ||
+    session.clientState === 'capturing' ||
+    session.clientState === 'analyzing';
+  const previewing = session.clientState === 'previewing';
+  const flipDisabled = session.demo || commandBusy || !previewing;
+  const shutterDisabled = commandBusy || (!session.demo && !previewing);
 
   return (
     <View style={styles.fill}>
-      {demoMode ? (
+      {session.demo ? (
         <View style={styles.demoStage}>
           <View style={styles.demoGlow} />
           <Text style={styles.demoMark}>Aperçu démo</Text>
         </View>
-      ) : previewHeld ? (
-        <View style={styles.fill} />
       ) : (
-        <CameraView
-          key={`cam-${facing}-${cameraEpoch}`}
-          ref={cameraRef}
-          style={styles.fill}
-          facing={facing}
-          mode="picture"
-          mirror={facing === 'front'}
-          onCameraReady={handleCameraReady}
-          onMountError={handleMountError}
-        />
+        <SdkPreview onReady={onPreviewReady} />
       )}
 
-      <FramingOverlay hint={AI_HINTS[hintIndex]} banner={banner} />
-
-      {!demoMode && (switching || !cameraReady) ? (
-        <View style={styles.switchingOverlay}>
-          <Text style={styles.switchingText}>
-            {switching ? 'Changement de caméra…' : 'Ouverture de la caméra…'}
-          </Text>
+      {session.capturedUri ? (
+        <View style={styles.resultLayer}>
+          <ResultPanel
+            uri={session.capturedUri}
+            status={session.uploadStatus}
+            progress={session.progress}
+            result={session.result}
+            error={session.error}
+            onRetake={session.retake}
+            onRetry={session.retry}
+          />
         </View>
-      ) : null}
+      ) : (
+        <>
+          <FramingOverlay hint={session.hint} banner={session.banner} />
 
-      <View style={styles.topBar}>
-        <Text style={styles.brand}>CoffeeShot</Text>
-        <Text style={styles.mode}>{demoMode ? 'Démo' : facing === 'front' ? 'Avant' : 'Arrière'}</Text>
-      </View>
+          {!session.demo && (flipping || starting || !previewing) ? (
+            <View style={styles.switchingOverlay}>
+              <Text style={styles.switchingText}>
+                {flipping ? 'Changement de caméra…' : 'Ouverture de la caméra…'}
+              </Text>
+            </View>
+          ) : null}
 
-      <View style={styles.controls}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Retourner la caméra"
-          disabled={flipDisabled}
-          onPress={() => {
-            void toggleFacing();
-          }}
-          style={[styles.sideButton, flipDisabled && styles.sideDisabled]}
-        >
-          <Text style={styles.sideLabel}>Flip</Text>
-        </Pressable>
+          <View style={styles.topBar}>
+            <Text style={styles.brand}>CoffeeShot</Text>
+            <Text style={styles.mode}>
+              {session.demo ? 'Démo' : session.facing === 'front' ? 'Avant' : 'Arrière'}
+            </Text>
+          </View>
 
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Prendre la photo"
-          disabled={shutterDisabled}
-          onPress={() => {
-            void capture();
-          }}
-          style={[styles.shutter, shutterDisabled && styles.shutterBusy]}
-        >
-          <View style={styles.shutterInner} />
-        </Pressable>
+          <View style={styles.controls}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Retourner la caméra"
+              disabled={flipDisabled}
+              onPress={() => {
+                void session.flip();
+              }}
+              style={[styles.sideButton, flipDisabled && styles.sideDisabled]}
+            >
+              <Text style={styles.sideLabel}>Flip</Text>
+            </Pressable>
 
-        <View style={styles.sideButton}>
-          <Text style={styles.sideLabel}>{busy ? '…' : 'JPG'}</Text>
-        </View>
-      </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Prendre la photo"
+              disabled={shutterDisabled}
+              onPress={() => {
+                void session.capture();
+              }}
+              style={[styles.shutter, shutterDisabled && styles.shutterBusy]}
+            >
+              <View style={styles.shutterInner} />
+            </Pressable>
+
+            <View style={styles.sideButton}>
+              <Text style={styles.sideLabel}>{commandBusy ? '…' : 'JPG'}</Text>
+            </View>
+          </View>
+        </>
+      )}
     </View>
   );
 }
@@ -344,6 +171,35 @@ export function CameraScreen() {
 const styles = StyleSheet.create({
   fill: {
     flex: 1,
+    backgroundColor: colors.bg,
+  },
+  boot: {
+    flex: 1,
+    backgroundColor: colors.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 28,
+  },
+  bootMark: {
+    color: colors.creamMuted,
+    letterSpacing: 3,
+    fontSize: 13,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    marginBottom: 16,
+  },
+  bootTitle: {
+    color: colors.cream,
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  bootCopy: {
+    color: colors.creamMuted,
+    fontSize: 13,
+  },
+  resultLayer: {
+    ...StyleSheet.absoluteFill,
     backgroundColor: colors.bg,
   },
   demoStage: {

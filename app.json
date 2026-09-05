@@ -13,10 +13,7 @@
       "backgroundColor": "#0B0A09"
     },
     "ios": {
-      "supportsTablet": true,
-      "infoPlist": {
-        "NSCameraUsageDescription": "CoffeeShot utilise la caméra pour le cadrage et la capture de photos."
-      }
+      "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
@@ -25,8 +22,7 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false,
-      "permissions": ["android.permission.CAMERA"]
+      "predictiveBackGestureEnabled": false
     },
     "web": {
       "bundler": "metro",
@@ -34,17 +30,6 @@
       "backgroundColor": "#0B0A09",
       "name": "CoffeeShot — test caméra",
       "shortName": "CoffeeShot"
-    },
-    "plugins": [
-      [
-        "expo-camera",
-        {
-          "cameraPermission": "CoffeeShot utilise la caméra pour le cadrage et la capture de photos.",
-          "microphonePermission": "CoffeeShot n'enregistre pas de son, mais le navigateur peut demander l'accès micro.",
-          "recordAudioAndroid": false,
-          "barcodeScannerEnabled": false
-        }
-      ]
-    ]
+    }
   }
 }
