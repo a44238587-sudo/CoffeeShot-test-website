@@ -296,7 +296,7 @@ export function CameraScreen() {
       <FramingOverlay hint={AI_HINTS[hintIndex]} banner={banner} />
 
       {!demoMode && (switching || !cameraReady) ? (
-        <View style={styles.switchingOverlay} pointerEvents="none">
+        <View style={styles.switchingOverlay}>
           <Text style={styles.switchingText}>
             {switching ? 'Changement de caméra…' : 'Ouverture de la caméra…'}
           </Text>
@@ -372,6 +372,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(8, 6, 5, 0.45)',
+    pointerEvents: 'none',
   },
   switchingText: {
     color: colors.cream,
