@@ -41,5 +41,12 @@ export function SdkPreview({ onReady }: SdkPreviewProps) {
     };
   }, []);
 
-  return <View ref={hostRef} style={StyleSheet.absoluteFill} pointerEvents="none" />;
+  return <View ref={hostRef} style={styles.host} />;
 }
+
+const styles = StyleSheet.create({
+  host: {
+    ...StyleSheet.absoluteFill,
+    pointerEvents: 'none',
+  },
+});
