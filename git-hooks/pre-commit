@@ -1,0 +1,8 @@
+#!/bin/sh
+# Shared GitHub archive guard. Missing policy fails closed.
+policy=/home/xxx/Desktop/en/app/cloudflare/scripts/github-archive-policy.mjs
+if [ ! -f "$policy" ]; then
+  echo "WARNING: shared GitHub archive guard is missing; publication refused." >&2
+  exit 1
+fi
+exec node "$policy" --index .
