@@ -2,9 +2,9 @@
 
 Browser test page for **CoffeeShot**. The Expo / React Native Web UI is a thin shell: preview chrome, framing overlay, shutter, and result panel. **Camera, flip, capture, and analyze** are driven by the [CoffeeShot browser SDK](https://github.com/a44238587-sudo/CoffeeShot-sdk).
 
-Live CDN: `https://coffeeshot-sdk.pages.dev/sdk.mjs`  
-Contract: [`SDK_CONTRACT.md`](https://github.com/a44238587-sudo/CoffeeShot-sdk/blob/main/SDK_CONTRACT.md)  
-SDK demo: https://coffeeshot-sdk.pages.dev/
+Live CDN: `https://coffeeshot-sdk-git.pages.dev/sdk.mjs`
+Contract: [`SDK_CONTRACT.md`](https://github.com/a44238587-sudo/CoffeeShot-sdk/blob/main/SDK_CONTRACT.md)
+SDK demo: https://coffeeshot-sdk-git.pages.dev/
 
 ## Stack
 
@@ -14,12 +14,8 @@ SDK demo: https://coffeeshot-sdk.pages.dev/
 
 ## Run on web
 
-```bash
-npm install
-npx expo start --web
-```
-
-Or `npm run web`. Metro serves the page; open the printed localhost URL.
+Run Expo Metro in the project's remote Unikraft environment and open its HTTPS
+URL. The page imports the SDK from the Git-connected Cloudflare Pages project.
 
 On first load, grant camera permission. You should see:
 
@@ -36,14 +32,14 @@ Copy `.env.example` to `.env` and restart Expo after changes.
 
 | Variable | Required | Description |
 | --- | --- | --- |
-| `EXPO_PUBLIC_SDK_ORIGIN` | no | Origin that hosts `sdk.mjs`. Default: `https://coffeeshot-sdk.pages.dev`. |
+| `EXPO_PUBLIC_SDK_ORIGIN` | no | Origin that hosts `sdk.mjs`. Default: `https://coffeeshot-sdk-git.pages.dev`. |
 | `EXPO_PUBLIC_API_URL` | no | Backend origin passed to `createClient({ apiUrl })`. When unset, the SDK uses a local mock analysis. |
 | `EXPO_PUBLIC_ANALYZE_PATH` | no | Path passed to `createClient({ analyzePath })`. Default: `/analyze`. |
 
 The page loads the SDK with:
 
 ```js
-const sdkOrigin = process.env.EXPO_PUBLIC_SDK_ORIGIN || 'https://coffeeshot-sdk.pages.dev';
+const sdkOrigin = process.env.EXPO_PUBLIC_SDK_ORIGIN || 'https://coffeeshot-sdk-git.pages.dev';
 const { checkCompatibility, createClient } = await import(`${sdkOrigin}/sdk.mjs`);
 ```
 
@@ -69,9 +65,6 @@ The SDK uses the browser [MediaDevices / `getUserMedia`](https://developer.mozil
 
 The browser SDK is not available in Expo Go / native binaries. Those targets show a short message asking you to open the page in a browser. Web is the supported test surface.
 
-```bash
-npx expo start
-```
 
 ## Project layout
 
