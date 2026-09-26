@@ -19,8 +19,6 @@ universal Fast recipe to export the Expo web page. `[cloudflare:full]` adds
 remote TypeScript and published asset checks. The Git-connected project is
 <https://coffeeshot-test-website-git.pages.dev/>. Interactive Expo tunnel
 testing uses Unikraft when its launcher is configured for this repository.
-The former Direct Upload site remains at `coffeeshot-test-website.pages.dev`
-until its retired deployment is removed.
 
 On first load, grant camera permission. You should see:
 
