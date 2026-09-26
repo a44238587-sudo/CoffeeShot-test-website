@@ -2,6 +2,7 @@
 // Copy this file unchanged into each repository that uses the shared command guard.
 import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -123,11 +124,25 @@ function installBinGuards() {
   }
 }
 
-function buildCloudflare() {
+export async function validateAuthenticationIntegration(root, manifest) {
+  if (!manifest.dependencies?.['website-auth-sdk'] && !manifest.devDependencies?.['website-auth-sdk']) return;
+  let validator;
+  try {
+    validator = createRequire(path.join(root, 'package.json')).resolve('website-auth-sdk/validate-integration');
+  } catch (cause) {
+    throw new Error('Authentication requires the shared website-auth-sdk flow. Upgrade the dependency.', { cause });
+  }
+  const { validateWebsiteAuthIntegration } = await import(pathToFileURL(validator).href);
+  validateWebsiteAuthIntegration(root);
+}
+
+async function buildCloudflare() {
   if (isLocalWorkspace) throw new Error('Local builds and tests are disabled. Publish GitHub main for Cloudflare Pages validation.');
   const mode = resolveCloudflareBuildMode();
   console.log(`[cloudflare-build] mode=${mode}`);
-  const scripts = JSON.parse(readFileSync(path.join(projectRoot, 'package.json'), 'utf8')).scripts || {};
+  const manifest = JSON.parse(readFileSync(path.join(projectRoot, 'package.json'), 'utf8'));
+  const scripts = manifest.scripts || {};
+  await validateAuthenticationIntegration(projectRoot, manifest);
   const env = {
     ...process.env,
     CLOUDFLARE_BUILD_MODE: mode,
@@ -161,7 +176,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     if (process.argv[2] === 'install') {
       installBinGuards();
     } else if (process.argv[2] === 'build') {
-      buildCloudflare();
+      await buildCloudflare();
     } else {
       printBlockedAstroMessage();
       process.exitCode = 1;
