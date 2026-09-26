@@ -1,0 +1,14 @@
+{
+  "name": "coffeeshot-test-website-git",
+  "pages_build_output_dir": "./dist",
+  "compatibility_date": "2026-09-26",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "services": [
+    {
+      "binding": "AUTH_SUPABASE_APP",
+      "service": "auth-supabase-app"
+    }
+  ]
+}

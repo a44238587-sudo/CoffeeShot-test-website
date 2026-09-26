@@ -38,3 +38,35 @@ This user-requested rule takes precedence over older artifact-publication instru
 - Related scope: `/home/xxx/Desktop/en/app/cloudflare/scripts/` owns the shared
   guard; `/home/xxx/Desktop/en/app/cloudflare/` owns this workspace-wide policy.
 <!-- GITHUB_NO_ARCHIVES_END -->
+
+## Owner-only Test Access
+
+- Authentication appSlug: `coffeeshot`; the only authorized email is `a44238587@gmail.com`.
+- Root gate: `functions/_middleware.js`, using SDK `createPagesWebsiteGuard`.
+- Protect documents, static assets, API calls, and WebSocket handshakes.
+- Auth facade: `functions/api/auth/[[path]].js`, with the same `allowedEmail`.
+- Verify identity through `AUTH_SUPABASE_APP`; never trust browser-supplied email values.
+- Only exact login assets and `/api/auth/*` remain public.
+- Login document: `/test-access/`, sourced from `src/test-access/`.
+- Package browser modules through `scripts/publish-test-access.mjs` during remote builds.
+- Emit `_routes.json` with `include: ["/*"]`, `exclude: []`.
+- Missing sessions return 401; authenticated nonowners return 403.
+- Unauthorized HTML navigations redirect with 303 to `/test-access/`.
+- Protected responses use `Cache-Control: private, no-store`.
+- Error contracts: `../website-auth-sdk/configuration/FLOW.md`, owner-access section.
+- Error example: `{"ok":false,"rid":"owner-check-001","error":{"code":"website_access_denied","message":"This account is not authorized to access this website.","category":"authorization","retryable":false}}`.
+- CWD: `/home/xxx/Desktop/en/app/cloudflare/CoffeeShot-test-website`; publish using `github-publish-main "fix: owner-only test access [cloudflare:full]"`.
+- Build: `npm run build:cloudflare`; tests: `npm run check:full`, remotely only.
+- Verify `/test-access/` returns 200 and unauthenticated `/` redirects.
+- Verify owner access succeeds; reject other accounts before downstream execution.
+
+### Authentication dependencies
+
+- `../website-auth-sdk/`
+  - Owns identity guards, login flow, error contracts, and packaged tests.
+- `../workers/common/auth-supabase-app/`
+  - Registers application slugs and verifies identities through its private binding.
+- `../workers/common/auth-supabase-core/`
+  - Owns Supabase authentication and the verified user projection.
+- `../supabase/Common/`
+  - Owns shared identities and application memberships.

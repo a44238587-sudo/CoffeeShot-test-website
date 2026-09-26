@@ -77,3 +77,15 @@ src/screens/CameraScreen.tsx    # RN Web shell: gate, overlay, shutter, result
 src/sdk/                        # CDN loader + createClient session
 src/components/                 # framing overlay, permission gate, result sheet
 ```
+
+## Owner-only website access
+
+Only the verified account `a44238587@gmail.com` may use this test website.
+The root Pages middleware checks the shared authentication service before
+serving any document, static asset, business API or WebSocket handshake.
+`/test-access/` provides sign-in; only its exact assets and `/api/auth/*` are
+public. The auth facade independently checks the same email before issuing
+cookies. Other authenticated accounts receive 403 and cleared session cookies.
+Unauthenticated HTML requests redirect to sign-in; other requests receive 401.
+The remote build packages SDK browser modules and emits `_routes.json` with
+no excluded paths. Existing product operations and local drafts remain unchanged.
