@@ -12,10 +12,13 @@ SDK demo: https://coffeeshot-sdk-git.pages.dev/
 - CoffeeShot browser SDK loaded at runtime from the CDN (`checkCompatibility`, `createClient`)
 - Single full-bleed camera screen, dark UI, French copy
 
-## Run on web
+## Publication
 
-Run Expo Metro in the project's remote Unikraft environment and open its HTTPS
-URL. The page imports the SDK from the Git-connected Cloudflare Pages project.
+Publish GitHub `main` with `github-publish-main`. Cloudflare Pages runs the
+universal Fast recipe to export the Expo web page. `[cloudflare:full]` adds
+remote TypeScript and published asset checks. The Git-connected project is
+<https://coffeeshot-test-website-git.pages.dev/>. Interactive Expo tunnel
+testing uses Unikraft when its launcher is configured for this repository.
 
 On first load, grant camera permission. You should see:
 

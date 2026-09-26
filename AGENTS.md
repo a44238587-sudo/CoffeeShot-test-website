@@ -1,7 +1,26 @@
 # CoffeeShot-test-website rules
 
+## Rule 1 — Project Commands
+
+- Work in `/home/xxx/Desktop/en/app/cloudflare/CoffeeShot-test-website/` on `main`; publish the complete visible worktree with `github-publish-main "message"`.
+- Cloudflare Pages runs `npm run build:cloudflare` after each GitHub `main` commit. Fast exports the Expo web page; `[cloudflare:full]` adds TypeScript and published asset checks after the same export.
+- Follow `/home/xxx/Desktop/en/app/cloudflare/scripts/PROJECT_COMMAND.md` and verify the remote result through `publication.json`.
+- Interactive Metro and Expo tunnel testing belongs on Unikraft. This repository has no Unikraft launcher configured. Local launch, build, and test: not applicable.
+
+## Rule 2 — Strict Contracts
+
+- Import the browser SDK from the published `EXPO_PUBLIC_SDK_ORIGIN` or its documented default; require an HTTPS origin.
+- Keep camera access and SDK analysis behind the site's explicit permission and demo flows.
+- Keep `scripts/project-command.mjs` byte-for-byte identical to `/home/xxx/Desktop/en/app/cloudflare/scripts/project-command.mjs`.
+
+## Rule 3 — Related Project Directories
+
+- `/home/xxx/Desktop/en/app/cloudflare/CoffeeShot-sdk/` — browser SDK source and public module contract.
+- `/home/xxx/Desktop/en/app/cloudflare/scripts/` — shared Pages command and publication guard.
+- Inspect the SDK contract before changing import behavior or the hosted origin.
+
 <!-- GITHUB_NO_ARCHIVES_START -->
-## GitHub: source on main, no build or test archives
+## Rule 4 — GitHub: source on main, no build or test archives
 
 This user-requested rule takes precedence over older artifact-publication instructions.
 - Keep the current source on canonical `main` and preserve normal Git commit history.

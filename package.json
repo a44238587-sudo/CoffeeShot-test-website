@@ -4,10 +4,21 @@
   "private": true,
   "main": "index.ts",
   "scripts": {
-    "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web"
+    "postinstall": "node scripts/project-command.mjs install",
+    "start": "node scripts/project-command.mjs",
+    "android": "node scripts/project-command.mjs",
+    "ios": "node scripts/project-command.mjs",
+    "web": "node scripts/project-command.mjs",
+    "dev": "node scripts/project-command.mjs",
+    "dev:full": "node scripts/project-command.mjs",
+    "build": "node scripts/project-command.mjs",
+    "preview": "node scripts/project-command.mjs",
+    "test": "node scripts/project-command.mjs",
+    "deploy": "node scripts/project-command.mjs",
+    "expo": "node scripts/project-command.mjs",
+    "wrangler": "node scripts/project-command.mjs",
+    "build:cloudflare": "node scripts/project-command.mjs build",
+    "check:full": "node scripts/check-full.mjs"
   },
   "dependencies": {
     "@expo/metro-runtime": "~57.0.15",
