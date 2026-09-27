@@ -3,15 +3,15 @@ const auth = createWebsiteAuthFlow({
   authBaseUrl: '/api/auth', storageKey: 'test-owner-access', requestIdPrefix: 'test-owner', persistSession: false,
   googleClientId: '810305245079-cpjl4gh73pd5u6gglidvlnk388ebn0rp.apps.googleusercontent.com',
   getOAuthCallbackUrl: () => `${location.origin}/test-access/`,
-  oauthSuccessUrl: '/', oauthFailureUrl: '/test-access/', signedOutUrl: '/test-access/',
+  getSuccessUrl: () => '/', oauthFailureUrl: '/test-access/', signedOutUrl: '/test-access/',
   isProtectedRoute: () => false,
+  isAuthRoute: url => /^\/test-access\/?$/.test(url.pathname),
 });
 attachWebsiteAuthFlow(auth);
 const status = document.querySelector('#status');
 const report = error => { status.textContent = error.message || 'Connexion indisponible.'; };
 auth.subscribe(state => {
   for (const button of document.querySelectorAll('button')) button.disabled = state.busy || state.phase === 'checking';
-  if (state.canRenderProtected) { location.replace('/'); return; }
   status.textContent = state.error?.message || (state.busy ? 'Connexion en cours…' : 'Accès réservé au compte autorisé.');
 });
 document.querySelector('#login').addEventListener('submit', event => {
