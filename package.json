@@ -21,13 +21,13 @@
     "check:full": "node scripts/check-full.mjs"
   },
   "dependencies": {
-    "@expo/metro-runtime": "~57.0.15",
-    "expo": "~57.0.20",
-    "expo-status-bar": "~57.0.1",
-    "react": "19.2.3",
-    "react-dom": "19.2.3",
-    "react-native": "0.86.3",
-    "react-native-web": "^0.21.2",
+    "@expo/metro-runtime": "~55.0.12",
+    "expo": "~55.0.31",
+    "expo-status-bar": "~55.0.6",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "react-native": "0.83.10",
+    "react-native-web": "~0.21.0",
     "website-auth-sdk": "file:packages/website-auth-sdk-2.0.2.tgz"
   },
   "devDependencies": {
