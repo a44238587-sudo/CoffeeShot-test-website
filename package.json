@@ -28,7 +28,7 @@
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
     "react-native-web": "^0.21.2",
-    "website-auth-sdk": "file:packages/website-auth-sdk-2.0.1.tgz"
+    "website-auth-sdk": "file:packages/website-auth-sdk-2.0.2.tgz"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
