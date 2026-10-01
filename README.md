@@ -1,10 +1,10 @@
 # CoffeeShot test website
 
-Browser test page for **CoffeeShot**. The Expo / React Native Web UI is a thin shell: preview chrome, framing overlay, shutter, and result panel. **Camera, flip, capture, and analyze** are driven by the [CoffeeShot browser SDK](https://github.com/a44238587-sudo/CoffeeShot-sdk).
+Browser test page for **CoffeeShot**. The Expo / React Native Web UI is a thin shell: preview chrome, framing overlay, shutter, and result panel. **Camera, flip, capture, and analyze** are driven by the [CoffeeShot browser SDK](https://github.com/a44238587-sudo/coffeeshot-sdk).
 
-Live CDN: `https://coffeeshot-sdk-git.pages.dev/sdk.mjs`
-Contract: [`SDK_CONTRACT.md`](https://github.com/a44238587-sudo/CoffeeShot-sdk/blob/main/SDK_CONTRACT.md)
-SDK demo: https://coffeeshot-sdk-git.pages.dev/
+Live CDN: `https://coffeeshot-sdk.pages.dev/sdk.mjs`
+Contract: [`SDK_CONTRACT.md`](https://github.com/a44238587-sudo/coffeeshot-sdk/blob/main/SDK_CONTRACT.md)
+SDK demo: https://coffeeshot-sdk.pages.dev/
 
 ## Stack
 
@@ -17,7 +17,7 @@ SDK demo: https://coffeeshot-sdk-git.pages.dev/
 Publish GitHub `main` with `github-publish-main`. Cloudflare Pages runs the
 universal Fast recipe to export the Expo web page. `[cloudflare:full]` adds
 remote TypeScript and published asset checks. The Git-connected project is
-<https://coffeeshot-test-website-git.pages.dev/>. Interactive Expo tunnel
+<https://coffeeshot-test-website.pages.dev/>. Interactive Expo tunnel
 testing uses Unikraft when its launcher is configured for this repository.
 
 On first load, grant camera permission. You should see:
@@ -35,14 +35,14 @@ Copy `.env.example` to `.env` and restart Expo after changes.
 
 | Variable | Required | Description |
 | --- | --- | --- |
-| `EXPO_PUBLIC_SDK_ORIGIN` | no | Origin that hosts `sdk.mjs`. Default: `https://coffeeshot-sdk-git.pages.dev`. |
+| `EXPO_PUBLIC_SDK_ORIGIN` | no | Origin that hosts `sdk.mjs`. Default: `https://coffeeshot-sdk.pages.dev`. |
 | `EXPO_PUBLIC_API_URL` | no | Backend origin passed to `createClient({ apiUrl })`. When unset, the SDK uses a local mock analysis. |
 | `EXPO_PUBLIC_ANALYZE_PATH` | no | Path passed to `createClient({ analyzePath })`. Default: `/analyze`. |
 
 The page loads the SDK with:
 
 ```js
-const sdkOrigin = process.env.EXPO_PUBLIC_SDK_ORIGIN || 'https://coffeeshot-sdk-git.pages.dev';
+const sdkOrigin = process.env.EXPO_PUBLIC_SDK_ORIGIN || 'https://coffeeshot-sdk.pages.dev';
 const { checkCompatibility, createClient } = await import(`${sdkOrigin}/sdk.mjs`);
 ```
 

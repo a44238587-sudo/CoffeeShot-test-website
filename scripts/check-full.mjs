@@ -28,7 +28,7 @@ function scripts(directory) {
   });
 }
 const bundles = scripts('dist');
-if (!bundles.some((file) => readFileSync(file, 'utf8').includes('coffeeshot-sdk-git.pages.dev'))) {
+if (!bundles.some((file) => readFileSync(file, 'utf8').includes('coffeeshot-sdk.pages.dev'))) {
   throw new Error('Published CoffeeShot test site does not reference the Git-connected SDK.');
 }
 console.log('[cloudflare-build] Full CoffeeShot test website checks passed.');
