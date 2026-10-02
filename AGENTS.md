@@ -1,12 +1,12 @@
 # CoffeeShot Test Website
 
 Scope: `coffeeshot-test-website/`. Modification requires an explicit user
-request. Inherits workspace and applicable parent rules. Expo web diagnostic client, built remotely by Cloudflare Pages.
+request. Inherits workspace and applicable parent rules. Astro diagnostic client, built remotely by Cloudflare Pages.
 Pages project: coffeeshot-test-website; deployment alias https://coffeeshot-test-website.pages.dev; canonical main.
 GitHub source: a44238587-sudo/coffeeshot-test-website.
-Owner-only diagnostic environment; shared authentication appSlug coffeeshot.
+Owner-only diagnostic environment; shared authentication appSlug coffeeframe.
 
-Scoped Markdown: `README.md`.
+Scoped Markdown: `README.md`; `DESIGN.md`.
 
 ## Rule 1 — Project Commands
 
@@ -29,7 +29,7 @@ Fast is default; exactly one [cloudflare:full] subject marker adds check:full
 after the same recipe. Malformed/unknown/repeated markers fail closed.
 Keep scripts/project-command.mjs identical to the shared workspace copy.
 scripts/cloudflare-build-command.mjs owns the recipe; check-full.mjs owns Full.
-Fast exports Expo web; Full adds TypeScript and published-asset checks.
+Fast builds Astro; Full adds Astro checks, owner-gate tests and assets.
 Interactive Metro/tunnel testing belongs on Unikraft; no launcher is configured
 here. Do not substitute local Metro or start another remote environment.
 Local servers, builds, tests, manual uploads, and alternate deploy triggers are
@@ -39,8 +39,8 @@ disabled. github-publish-main --receive-main is inbound-only synchronization.
 
 ## Rule 2 — Strict Contracts
 
-- Import HTTPS EXPO_PUBLIC_SDK_ORIGIN or the SDK’s documented default.
-- Keep camera access and analysis behind explicit permission/demo actions.
+- Import the immutable CoffeeShot package published by its Pages build.
+- Keep camera access and vision guidance behind explicit permission actions.
 - Consume published browser SDK exports; never copy implementations.
 
 ## Rule 3 — Related Project Directories
@@ -48,6 +48,8 @@ disabled. github-publish-main --receive-main is inbound-only synchronization.
 ```text
 ../coffeeshot-sdk/
   Owns browser camera/analysis SDK and SDK_CONTRACT.md.
+../workers/coffeeframe/coffeeframe-api/
+  Existing vision guidance route; shared coffeeframe identity.
 ../scripts/
   Owns shared Pages commands and publication guards.
 ../website-auth-sdk/
@@ -62,7 +64,7 @@ disabled. github-publish-main --receive-main is inbound-only synchronization.
 
 ## Rule 4 — Project Design
 
-- Preserve existing diagnostic/demo surfaces; never activate cameras on page loads.
+- Never activate cameras on page loads; DESIGN.md owns diagnostic visuals.
 
 Follow the project DESIGN.md when present; workspace DESIGN.md governs
 production interfaces. Diagnostic consoles keep their documented project theme.
@@ -70,7 +72,7 @@ production interfaces. Diagnostic consoles keep their documented project theme.
 ## Rule 5 — Project Workflow
 
 ```text
-[Explicit camera permission] --> [Published SDK capture → analysis]
+[Explicit camera permission] --> [Published SDK capture → natural correction]
                        |          |
                     SUCCESS     FAILURE
                        |          |
@@ -80,7 +82,7 @@ production interfaces. Diagnostic consoles keep their documented project theme.
 ## Rule 6 — API/MCP Usage
 
 ```text
-[Diagnostic browser] --> [HTTPS SDK origin /sdk.mjs]
+[Diagnostic browser] --> [SDK → same-origin /api/photo/guidance → COFFEEFRAME_API]
                        |          |
                     SUCCESS     FAILURE
                        |          |
@@ -96,7 +98,7 @@ Public contract: ../coffeeshot-sdk/SDK_CONTRACT.md. No independent MCP service.
 - Use private no-store responses; never trust browser-supplied owner email.
 - Verify anonymous login, owner success, and authenticated nonowner rejection.
 
-Authentication appSlug: `coffeeshot`; private binding AUTH_SUPABASE_APP.
+Authentication appSlug: `coffeeframe`; private binding AUTH_SUPABASE_APP.
 functions/_middleware.js uses createPagesWebsiteGuard; auth facade:
 functions/api/auth/[[path]].js. Only exact login assets and /api/auth/* are
 public. Remote scripts/publish-test-access.mjs packages the login browser modules;

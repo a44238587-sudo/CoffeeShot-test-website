@@ -2,7 +2,6 @@
   "name": "coffeeshot-test-website",
   "version": "1.0.0",
   "private": true,
-  "main": "index.ts",
   "scripts": {
     "postinstall": "node scripts/project-command.mjs install",
     "start": "node scripts/project-command.mjs",
@@ -21,17 +20,13 @@
     "check:full": "node scripts/check-full.mjs"
   },
   "dependencies": {
-    "@expo/metro-runtime": "~55.0.12",
-    "expo": "~55.0.31",
-    "expo-status-bar": "~55.0.6",
-    "react": "19.2.0",
-    "react-dom": "19.2.0",
-    "react-native": "0.83.10",
-    "react-native-web": "~0.21.0",
+    "astro": "^7.2.8",
+    "coffeeshot-sdk": "file:packages/coffeeshot-sdk-0.2.1.tgz",
     "website-auth-sdk": "file:packages/website-auth-sdk-2.0.2.tgz"
   },
   "devDependencies": {
-    "@types/react": "~19.2.2",
+    "@astrojs/check": "^0.9.10",
     "typescript": "~6.0.3"
-  }
+  },
+  "type": "module"
 }

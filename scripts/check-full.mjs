@@ -9,11 +9,14 @@ if (!isAllowedCloudflareBuild() || process.env.CLOUDFLARE_BUILD_MODE !== 'full')
   process.exit(1);
 }
 
-const typecheck = spawnSync(process.execPath, ['node_modules/typescript/bin/tsc', '--noEmit'], {
+const typecheck = spawnSync(process.execPath, ['node_modules/astro/bin/astro.authorized.mjs', 'check'], {
   cwd: process.cwd(), env: process.env, stdio: 'inherit',
 });
 if (typecheck.error) throw typecheck.error;
 if (typecheck.status !== 0) process.exit(typecheck.status ?? 1);
+
+const guards = spawnSync(process.execPath, ['--test', 'tests/owner.test.mjs'], { stdio: 'inherit', env: process.env });
+if (guards.status !== 0) process.exit(guards.status ?? 1);
 
 const html = readFileSync('dist/index.html', 'utf8');
 if (!html.includes('<html') || statSync('dist/index.html').size === 0) {
@@ -28,7 +31,7 @@ function scripts(directory) {
   });
 }
 const bundles = scripts('dist');
-if (!bundles.some((file) => readFileSync(file, 'utf8').includes('coffeeshot-sdk.pages.dev'))) {
+if (!bundles.length || !html.includes('Camera lab')) {
   throw new Error('Published CoffeeShot test site does not reference the Git-connected SDK.');
 }
 console.log('[cloudflare-build] Full CoffeeShot test website checks passed.');

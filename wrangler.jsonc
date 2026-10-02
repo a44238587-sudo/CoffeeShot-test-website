@@ -9,6 +9,10 @@
     {
       "binding": "AUTH_SUPABASE_APP",
       "service": "auth-supabase-app"
+    },
+    {
+      "binding": "COFFEEFRAME_API",
+      "service": "coffeeframe-api"
     }
   ]
 }

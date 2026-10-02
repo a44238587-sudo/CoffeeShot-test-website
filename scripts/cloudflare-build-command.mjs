@@ -8,7 +8,7 @@ if (!isAllowedCloudflareBuild()) {
 }
 
 const result = spawnSync(process.execPath, [
-  'node_modules/expo/bin/cli', 'export', '--platform', 'web', '--output-dir', 'dist',
+  'node_modules/astro/bin/astro.authorized.mjs', 'build',
 ], {
   cwd: process.cwd(),
   env: { ...process.env, EXPO_NO_TELEMETRY: '1', CI: '1' },

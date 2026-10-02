@@ -2,7 +2,7 @@ import { createPagesWebsiteGuard } from 'website-auth-sdk/cloudflare-pages';
 
 // Every page, asset and API is private except these exact login resources.
 export const onRequest = createPagesWebsiteGuard({
-  appSlug: 'coffeeshot',
+  appSlug: 'coffeeframe',
   allowedEmail: 'a44238587@gmail.com',
   bindingName: 'AUTH_SUPABASE_APP',
   signInPath: '/test-access/',

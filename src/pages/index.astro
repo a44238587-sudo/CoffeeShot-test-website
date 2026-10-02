@@ -1,0 +1,49 @@
+---
+---
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><meta name="robots" content="noindex,nofollow"/><title>CoffeeShot · Camera lab</title></head>
+<body><main>
+  <p class="eyebrow">COFFEESHOT / PRIVATE CAMERA LAB</p>
+  <h1>A better shot.<br/>Still your photo.</h1>
+  <p>Optional vision guidance. Natural local corrections. Original preserved.</p>
+  <div class="layout"><section class="stage" aria-label="Camera">
+    <video id="preview" autoplay muted playsinline aria-label="Camera preview"></video>
+    <img id="result" alt="Photo result" hidden/>
+    <div id="grid" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+  </section><section class="controls">
+    <p id="hint" role="status">Open your camera to get started.</p>
+    <p id="error" role="alert"></p>
+    <button id="start">Open camera</button>
+    <button id="capture" disabled>Take photo</button>
+    <button id="guide" disabled>Enable vision guidance</button>
+    <p class="privacy">Guidance sends a small preview to the model every few seconds. Corrections run in this browser, without image generation.</p>
+    <div id="downloads" hidden><button id="compare">View original</button><a id="save" download="coffeeshot-corrected.jpg">Save corrected photo</a><a id="original" download="coffeeshot-original.jpg">Save original</a></div>
+    <a href="https://coffeeshot-sdk.pages.dev/SDK_CONTRACT.md">SDK contract</a>
+  </section></div>
+</main></body></html>
+<script>
+  import { createPhotoSession } from 'coffeeshot-sdk';
+  const video=document.querySelector<HTMLVideoElement>('#preview')!;
+  const result=document.querySelector<HTMLImageElement>('#result')!;
+  const start=document.querySelector<HTMLButtonElement>('#start')!,capture=document.querySelector<HTMLButtonElement>('#capture')!,guide=document.querySelector<HTMLButtonElement>('#guide')!;
+  const hint=document.querySelector<HTMLElement>('#hint')!,error=document.querySelector<HTMLElement>('#error')!,downloads=document.querySelector<HTMLElement>('#downloads')!;
+  const save=document.querySelector<HTMLAnchorElement>('#save')!,original=document.querySelector<HTMLAnchorElement>('#original')!,compare=document.querySelector<HTMLButtonElement>('#compare')!;
+  let guiding=false,urls:string[]=[],epoch=0;
+  const report=(e:unknown)=>{error.textContent=e instanceof Error?e.message:'Camera unavailable.';};
+  const release=()=>{urls.forEach(URL.revokeObjectURL);urls=[];};
+  const toggleGuide=(enabled:boolean)=>{guiding=enabled;session.guide(enabled);guide.textContent=enabled?'Stop vision guidance':'Enable vision guidance';};
+  const session=createPhotoSession({video,guidanceUrl:'/api/photo/guidance',onGuidance:value=>{hint.textContent=value.message;},onError:e=>{toggleGuide(false);report(e);}});
+  start.onclick=async()=>{start.disabled=true;error.textContent='';const current=++epoch;release();result.hidden=true;video.hidden=false;downloads.hidden=true;
+    try{await session.start();if(current===epoch){capture.disabled=false;guide.disabled=false;hint.textContent='Place your subject in the grid.';}}
+    catch(e){report(e);}finally{start.disabled=false;}};
+  guide.onclick=()=>{error.textContent='';toggleGuide(!guiding);};
+  capture.onclick=async()=>{const current=epoch;capture.disabled=true;guide.disabled=true;start.disabled=true;toggleGuide(false);error.textContent='';hint.textContent='Improving light, color and detail…';
+    try{const photo=await session.capture();if(current!==epoch)return;release();const a=URL.createObjectURL(photo.original),b=URL.createObjectURL(photo.corrected);urls=[a,b];original.href=a;save.href=b;result.src=b;result.hidden=false;video.hidden=true;downloads.hidden=false;compare.textContent='View original';hint.textContent='Natural correction · original preserved';session.stop();}
+    catch(e){report(e);capture.disabled=false;guide.disabled=false;}finally{start.disabled=false;start.textContent='Open camera again';}};
+  compare.onclick=()=>{const show=result.src===save.href;result.src=show?original.href:save.href;compare.textContent=show?'View correction':'View original';result.alt=show?'Original photo':'Naturally corrected photo';};
+  document.addEventListener('visibilitychange',()=>{if(document.hidden){epoch++;toggleGuide(false);capture.disabled=true;guide.disabled=true;hint.textContent='Camera paused. Open it again to continue.';}});
+  window.addEventListener('pagehide',()=>{epoch++;session.destroy();release();},{once:true});
+</script>
+<style>
+  :global(body){margin:0;background:#111827;color:#f9fafb;font-family:system-ui,sans-serif}main{max-width:1100px;margin:auto;padding:40px 24px}h1{font-size:clamp(36px,6vw,64px);line-height:1.05;letter-spacing:-.04em;margin:24px 0}p{color:#9ca3af;line-height:1.6}.eyebrow{font-size:12px;letter-spacing:.15em;color:#a78bfa}.layout{display:grid;grid-template-columns:1.2fr 1fr;gap:32px;margin-top:32px}.stage{position:relative;background:#030712;overflow:hidden;border-radius:20px;aspect-ratio:3/4}video,img{width:100%;height:100%;object-fit:contain}.controls{display:flex;flex-direction:column;gap:12px;justify-content:center}button,a{font:inherit}button{min-height:48px;border:1px solid #4b5563;border-radius:12px;background:#1f2937;color:white;padding:12px 20px;cursor:pointer}button:disabled{opacity:.45;cursor:default}#capture{background:#7c3aed;border-color:#7c3aed}a{color:#c4b5fd}#downloads a{display:block;margin:16px 0}#hint{font-size:22px;color:white}#error{color:#fca5a5}.privacy{font-size:13px}#grid{pointer-events:none;position:absolute;inset:0}#grid span{position:absolute;background:#ffffff44}#grid span:nth-child(1),#grid span:nth-child(2){top:0;bottom:0;width:1px;left:33.33%}#grid span:nth-child(2){left:66.66%}#grid span:nth-child(3),#grid span:nth-child(4){left:0;right:0;height:1px;top:33.33%}#grid span:nth-child(4){top:66.66%}@media(max-width:700px){.layout{grid-template-columns:1fr}main{padding:24px 16px}}
+</style>
