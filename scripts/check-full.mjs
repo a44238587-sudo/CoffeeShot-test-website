@@ -15,6 +15,9 @@ const typecheck = spawnSync(process.execPath, ['node_modules/astro/bin/astro.aut
 if (typecheck.error) throw typecheck.error;
 if (typecheck.status !== 0) process.exit(typecheck.status ?? 1);
 
+const passwordChecks = spawnSync(process.execPath, ['scripts/check-test-password.mjs'], { stdio: 'inherit', env: process.env });
+if (passwordChecks.status !== 0) process.exit(passwordChecks.status ?? 1);
+
 const guards = spawnSync(process.execPath, ['--test', 'tests/owner.test.mjs'], { stdio: 'inherit', env: process.env });
 if (guards.status !== 0) process.exit(guards.status ?? 1);
 
